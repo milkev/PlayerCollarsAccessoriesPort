@@ -1,6 +1,7 @@
 package org.jlortiz.playercollars.item;
 
-import dev.emi.trinkets.api.TrinketsApi;
+import io.wispforest.accessories.Accessories;
+import io.wispforest.accessories.api.AccessoriesCapability;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.DyedColorComponent;
@@ -35,22 +36,27 @@ public class ClickerItem extends Item {
     }
 
     @Override
-    public TypedActionResult<ItemStack> use(World p_41432_, PlayerEntity p_41433_, Hand p_41434_) {
-        p_41433_.setCurrentHand(p_41434_);
-        if (!p_41432_.isClient) {
-            double distance = p_41433_.getAttributeValue(PlayerCollarsMod.ATTR_CLICKER_DISTANCE);
+    public TypedActionResult<ItemStack> use(World world, PlayerEntity playerEntity, Hand hand) {
+        playerEntity.setCurrentHand(hand);
+        if (!world.isClient) {
+            double distance = playerEntity.getAttributeValue(PlayerCollarsMod.ATTR_CLICKER_DISTANCE);
             if (distance > 0) {
-                List<ServerPlayerEntity> plrs = ((ServerWorld) p_41432_).getPlayers((p) -> !p.isPartOf(p_41433_) && p.isInRange(p_41433_, distance));
-                PacketLookAtLerped packet = new PacketLookAtLerped(p_41433_);
+                List<ServerPlayerEntity> plrs = ((ServerWorld) world).getPlayers((p) -> !p.isPartOf(playerEntity) && p.isInRange(playerEntity, distance));
+                PacketLookAtLerped packet = new PacketLookAtLerped(playerEntity);
                 for (ServerPlayerEntity p : plrs) {
-                    TrinketsApi.getTrinketComponent(p).map((x) -> x.getEquipped(PlayerCollarsMod.COLLAR_ITEM))
-                            .map((x) -> PlayerCollarsMod.filterStacksByOwner(x, p_41433_.getUuid()))
-                            .ifPresent((x) -> ServerPlayNetworking.send(p, packet));
+                    try {
+                        ItemStack itemStack = AccessoriesCapability.get(p).getFirstEquipped(PlayerCollarsMod.COLLAR_ITEM).stack();
+                        if (PlayerCollarsMod.stackOwnedBy(itemStack, p.getUuid())) {
+                            ServerPlayNetworking.send(p, packet);
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Player Collars::ClickerItem::use - Failed try: " + e);
+                    }
                 }
             }
-            p_41432_.playSoundFromEntity(null, p_41433_, PlayerCollarsMod.CLICKER_ON, SoundCategory.PLAYERS, 1, 1);
+            world.playSoundFromEntity(null, playerEntity, PlayerCollarsMod.CLICKER_ON, SoundCategory.PLAYERS, 1, 1);
         }
-        return TypedActionResult.fail(p_41433_.getStackInHand(p_41434_));
+        return TypedActionResult.fail(playerEntity.getStackInHand(hand));
     }
 
     @Override

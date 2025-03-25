@@ -27,7 +27,7 @@ public class RegisterClient implements ClientModInitializer {
         ColorProviderRegistry.ITEM.register((stack, tintIndex) -> tintIndex == 0 ? ((BedBlock) ((BedItem) stack.getItem()).getBlock()).getColor().getFireworkColor() | 0xff000000 : -1, PlayerCollarsMod.DOG_BED_ITEMS);
         ModelPredicateProviderRegistry.register(PlayerCollarsMod.CLICKER_ITEM, Identifier.ofVanilla("cast"), (itemStack, clientWorld, livingEntity, seed) -> livingEntity != null && livingEntity.isUsingItem() && livingEntity.getActiveItem() == itemStack ? 1 : 0);
 
-        ModelLoadingPlugin.register(new CollarModelLoadingPlugin());
+        CollarRenderer.register();
         ClientPlayNetworking.registerGlobalReceiver(PacketLookAtLerped.ID, (payload, context) -> context.client().execute(() -> RotationLerpHandler.beginClickTurn(payload.vec())));
         WorldRenderEvents.END.register(RotationLerpHandler::turnTowardsClick);
     }

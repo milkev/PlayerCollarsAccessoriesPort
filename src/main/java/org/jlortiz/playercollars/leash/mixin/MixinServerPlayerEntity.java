@@ -1,12 +1,12 @@
 package org.jlortiz.playercollars.leash.mixin;
 
-import dev.emi.trinkets.api.SlotReference;
-import dev.emi.trinkets.api.TrinketsApi;
+import io.wispforest.accessories.api.AccessoriesCapability;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
@@ -152,26 +152,29 @@ public abstract class MixinServerPlayerEntity implements LeashImpl {
     }
 
     @Override
-    public ActionResult leashplayers$interact(PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
+    public ActionResult leashplayers$interact(PlayerEntity leasher, Hand hand) {
+        ItemStack stack = leasher.getStackInHand(hand);
         if (stack.getItem() == Items.LEAD && leashplayers$holder == null) {
             AtomicBoolean found = new AtomicBoolean(false);
-            TrinketsApi.getTrinketComponent((PlayerEntity) (Object) this).map((x) -> x.getEquipped(PlayerCollarsMod.COLLAR_ITEM))
-                    .map((x) -> PlayerCollarsMod.filterStacksByOwner(x, player.getUuid()))
-                    .ifPresent((stack1) -> {
-                        found.set(true);
-                        leashplayer$loyalty = ((PlayerEntity) (Object) this).getAttributeValue(PlayerCollarsMod.ATTR_LEASH_DISTANCE);
-                    });
+            try{
+                ItemStack collarItem = AccessoriesCapability.get((PlayerEntity) (Object) this).getFirstEquipped(PlayerCollarsMod.COLLAR_ITEM).stack();
+                if(PlayerCollarsMod.stackOwnedBy(collarItem, leasher.getUuid())) {
+                    found.set(true);
+                    leashplayer$loyalty = ((PlayerEntity) (Object) this).getAttributeValue(PlayerCollarsMod.ATTR_LEASH_DISTANCE);
+                }
+            } catch (Exception e) {
+                System.out.println("PlayerCollars::MixinServerPlayerEntity::leashPlayers$interact - failed: " + e);
+            }
             if (!found.get()) return ActionResult.PASS;
-            if (!player.isCreative()) {
+            if (!leasher.isCreative()) {
                 stack.decrement(1);
             }
-            leashplayers$attach(player);
+            leashplayers$attach(leasher);
             return ActionResult.SUCCESS;
         }
 
-        if (leashplayers$holder == player && leashplayers$lastage + 20 < leashplayers$self.age) {
-            if (!player.isCreative()) {
+        if (leashplayers$holder == leasher && leashplayers$lastage + 20 < leashplayers$self.age) {
+            if (!leasher.isCreative()) {
                 leashplayers$drop();
             }
             leashplayers$detach();
@@ -182,15 +185,15 @@ public abstract class MixinServerPlayerEntity implements LeashImpl {
     }
 
     @Inject(at=@At("TAIL"), method="damage")
-    private void checkCollarThorns(DamageSource p_9037_, float p_9038_, CallbackInfoReturnable<Boolean> cir) {
-        if (p_9037_.getAttacker() != null) {
+    private void checkCollarThorns(DamageSource damageSource, float damage, CallbackInfoReturnable<Boolean> cir) {
+        if (damageSource.getAttacker() != null) {
             LivingEntity self = ((LivingEntity) (Object) this);
-            TrinketsApi.getTrinketComponent(self).map((x) -> x.getEquipped(PlayerCollarsMod.COLLAR_ITEM))
-                .ifPresent((ls) -> {
-                    for (Pair<SlotReference, ItemStack> p : ls) {
-                        EnchantmentHelper.onTargetDamaged((ServerWorld) self.getWorld(), p_9037_.getAttacker(), p_9037_, p.getRight());
-                    }
-                });
+            try{
+                ItemStack collarItemstack = AccessoriesCapability.get(self).getFirstEquipped(PlayerCollarsMod.COLLAR_ITEM).stack();
+                EnchantmentHelper.onTargetDamaged((ServerWorld) self.getWorld(), damageSource.getAttacker(), damageSource, collarItemstack);
+            } catch (Exception e) {
+                System.out.println("PlayerCollars::MixingServerPlayerEntity::checkCollarThorns - failed: " + e);
+            }
         }
     }
 }

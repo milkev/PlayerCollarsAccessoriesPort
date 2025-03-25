@@ -2,8 +2,6 @@ package org.jlortiz.playercollars;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import dev.emi.trinkets.api.SlotReference;
-import dev.emi.trinkets.api.TrinketsApi;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -61,17 +59,14 @@ public class PlayerCollarsMod implements ModInitializer {
 	public static final DogBedBlock[] DOG_BEDS = new DogBedBlock[DyeColor.values().length];
 	public static final BedItem[] DOG_BED_ITEMS = new BedItem[DyeColor.values().length];
 
-	public static ItemStack filterStacksByOwner(List<Pair<SlotReference, ItemStack>> stacks, UUID plr) {
-		for (Pair<SlotReference, ItemStack> p : stacks) {
-			ItemStack is = p.getRight();
-			if (is.getItem() instanceof CollarItem item) {
-				OwnerComponent owner = item.getOwner(is);
-				if (owner != null && owner.uuid().equals(plr)) {
-					return is;
-				}
+	public static Boolean stackOwnedBy(ItemStack stack, UUID plr) {
+		if (stack.getItem() instanceof CollarItem item) {
+			OwnerComponent owner = item.getOwner(stack);
+			if (owner != null && owner.uuid().equals(plr)) {
+				return true;
 			}
 		}
-		return null;
+		return false;
 	}
 
 	@Override
@@ -80,7 +75,6 @@ public class PlayerCollarsMod implements ModInitializer {
 		PayloadTypeRegistry.playC2S().register(PacketUpdateCollar.ID, PacketUpdateCollar.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(PacketUpdateCollar.ID, PacketUpdateCollar::handle);
 		PayloadTypeRegistry.playS2C().register(PacketLookAtLerped.ID, PacketLookAtLerped.CODEC);
-		TrinketsApi.registerTrinket(PlayerCollarsMod.COLLAR_ITEM, PlayerCollarsMod.COLLAR_ITEM);
 		ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(itemGroup -> {
 			itemGroup.add(COLLAR_ITEM);
 			itemGroup.add(CLICKER_ITEM);

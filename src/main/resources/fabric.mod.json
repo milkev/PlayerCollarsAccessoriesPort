@@ -39,6 +39,6 @@
     "minecraft": "=1.21.x",
     "java": ">=17",
     "fabric-api": "*",
-    "trinkets": "=3.10.x"
+    "accessories": ">=1.1.0-beta.34+1.21.1"
   }
 }

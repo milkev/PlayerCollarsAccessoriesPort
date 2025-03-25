@@ -1,9 +1,12 @@
 package org.jlortiz.playercollars.item;
 
 import com.google.common.collect.Multimap;
-import dev.emi.trinkets.api.SlotReference;
-import dev.emi.trinkets.api.TrinketEnums;
-import dev.emi.trinkets.api.TrinketItem;
+import com.google.common.collect.MultimapBuilder;
+import io.wispforest.accessories.api.AccessoryItem;
+import io.wispforest.accessories.api.DropRule;
+import io.wispforest.accessories.api.attributes.AccessoryAttributeBuilder;
+import io.wispforest.accessories.api.components.AccessoryItemAttributeModifiers;
+import io.wispforest.accessories.api.slot.SlotReference;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.block.MapColor;
@@ -16,6 +19,7 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -33,9 +37,10 @@ import org.jlortiz.playercollars.OwnerComponent;
 import org.jlortiz.playercollars.PlayerCollarsMod;
 import org.jlortiz.playercollars.client.CollarDyeScreen;
 
+import java.util.HashMap;
 import java.util.List;
 
-public class CollarItem extends TrinketItem {
+public class CollarItem extends AccessoryItem {
 
     public CollarItem() {
         super(new Item.Settings().maxCount(1));
@@ -45,9 +50,6 @@ public class CollarItem extends TrinketItem {
     public int getEnchantability() {
         return 60;
     }
-
-    @Override
-    public void tick(ItemStack stack, SlotReference slot, LivingEntity entity) {}
 
     public int getColor(ItemStack itemStack) {
         DyedColorComponent $$1 = itemStack.get(DataComponentTypes.DYED_COLOR);
@@ -75,9 +77,9 @@ public class CollarItem extends TrinketItem {
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
-        super.appendTooltip(stack, context, tooltip, type);
-        if (type.isAdvanced()) {
+    public void getExtraTooltip(ItemStack stack, List<Text> tooltip, Item.TooltipContext tooltipContext, TooltipType tooltipType) {
+        super.appendTooltip(stack, tooltipContext, tooltip, tooltipType);
+        if (tooltipType.isAdvanced()) {
             tooltip.add(Text.translatable("item.playercollars.collar.paw_color", Integer.toHexString(getPawColor(stack))).setStyle(Style.EMPTY.withColor(Colors.GRAY)));
         }
         OwnerComponent owner = getOwner(stack);
@@ -91,15 +93,22 @@ public class CollarItem extends TrinketItem {
         return true;
     }
 
-    @Override
-    public TrinketEnums.DropRule getDropRule(ItemStack stack, SlotReference slot, LivingEntity entity) {
-        return TrinketEnums.DropRule.KEEP;
+    public DropRule getDropRule(ItemStack stack, SlotReference reference, DamageSource source) {
+        return DropRule.KEEP;
     }
 
+    public void getDynamicModifiers(ItemStack stack, SlotReference reference, AccessoryAttributeBuilder builder) {
+        Multimap<RegistryEntry<EntityAttribute>, EntityAttributeModifier> modifiers = MultimapBuilder.ListMultimapBuilder.hashKeys().arrayListValues().build();
+        EnchantmentHelper.applyAttributeModifiers(stack, AttributeModifierSlot.ANY, modifiers::put);
+        modifiers.asMap().forEach((registryEntry, entityAttributeModifier) -> builder.addExclusive(registryEntry, entityAttributeModifier.stream().iterator().next()));
+    }
+    
+    /*
     @Override
     public Multimap<RegistryEntry<EntityAttribute>, EntityAttributeModifier> getModifiers(ItemStack stack, SlotReference slot, LivingEntity entity, Identifier slotIdentifier) {
         Multimap<RegistryEntry<EntityAttribute>, EntityAttributeModifier> modifiers = super.getModifiers(stack, slot, entity, slotIdentifier);
         EnchantmentHelper.applyAttributeModifiers(stack, AttributeModifierSlot.ANY, modifiers::put);
         return modifiers;
     }
+     */
 }
